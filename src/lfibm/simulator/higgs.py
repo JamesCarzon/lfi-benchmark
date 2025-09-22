@@ -20,24 +20,6 @@ class HiggsSimulator:
     Higgs simulator for generating synthetic data without lf2i dependency.
     """
 
-    POI_CENTER = torch.tensor(1.0)
-    NP_CENTER = {
-        'tes': torch.tensor(1.0),
-        'jes': torch.tensor(1.0),
-        'soft_met': torch.tensor(0.0),
-        'ttbar_scale': torch.tensor(1.0),
-        'diboson_scale': torch.tensor(1.0),
-        'bkg_scale': torch.tensor(1.0)
-    }
-    POI_FOCUS_WIDTH = torch.tensor(1.2)
-    NP_FOCUS_WIDTH = {
-        'tes': torch.tensor(0.01),
-        'jes': torch.tensor(0.01),
-        'soft_met': torch.tensor(1.0),
-        'ttbar_scale': torch.tensor(0.02),
-        'diboson_scale': torch.tensor(0.25),
-        'bkg_scale': torch.tensor(0.001)
-    }
     POI_SPACE_BOUNDS = {'low': torch.tensor(0), 'high': torch.tensor(5)}
     NP_SPACE_BOUNDS = {
         'tes': {'low': torch.tensor(0.0), 'high': torch.tensor(1.5)},
@@ -93,7 +75,7 @@ class HiggsSimulator:
             self._datasets['ztautau']
         ]).reset_index(drop=True)
         self._full_set = pd.concat([self._signal_set, self._background_set]).reset_index(drop=True)
-        
+
         # Calculate signal proportion when mu = 1
         self._signal_prop_mu_equals_one = self._signal_set['weights'].sum() / self._full_set['weights'].sum()
         self._mu_upper_bound = np.ceil(np.array(np.min([
@@ -107,16 +89,17 @@ class HiggsSimulator:
 
         # Setup distributions
         self.proposal = proposal if proposal is not None else BoxUniform(
-            low=torch.tensor([self.POI_SPACE_BOUNDS['low']] + [self.NP_SPACE_BOUNDS[name]['low'] for name in self.NP_NAMES]),
-            high=torch.tensor([self.POI_SPACE_BOUNDS['high']] + [self.NP_SPACE_BOUNDS[name]['high'] for name in self.NP_NAMES])
-        )
-        
-        self.prior = prior if prior is not None else MultivariateNormal(
-            loc=torch.tensor([self.POI_CENTER] + [self.NP_CENTER[name] for name in self.NP_NAMES]),
-            covariance_matrix=torch.diag(
-                torch.tensor([self.POI_FOCUS_WIDTH] + [self.NP_FOCUS_WIDTH[name] for name in self.NP_NAMES])
+            low=torch.tensor(
+                [self.POI_SPACE_BOUNDS['low']] +\
+                [self.NP_SPACE_BOUNDS[name]['low'] for name in self.NP_NAMES]
+            ),
+            high=torch.tensor(
+                [self.POI_SPACE_BOUNDS['high']] +\
+                [self.NP_SPACE_BOUNDS[name]['high'] for name in self.NP_NAMES[:1]] +\
+                [self.NP_SPACE_BOUNDS[name]['low'] for name in self.NP_NAMES[1:]] # NOTE: 5/6 NPs are "turned off"
             )
         )
+        self.prior = self.proposal
         
         self.default_observable = default_observable
         self.energy_for_thresholding = 22  # GeV
@@ -289,7 +272,7 @@ class HiggsSimulator:
             samples[Y == 0, :] = samples_marginal
             samples[Y == 1, :] = samples_proposal
 
-            return Y, params, samples
+            return Y, params[:, :2], samples
             
         elif estimation_method in ['prediction', 'posterior']:
             raise NotImplementedError(f"Estimation method '{estimation_method}' not implemented")

@@ -19,6 +19,8 @@ Refer to the `script/gaussian/dev` subdirectory. This folder is all-inclusive --
 
 Example:
 
+> _Remark:_ At this stage, I like to open a "screen" in my terminal with `screen -R run_script`, say. With the screen open, I can run my script as needed, and then I can close the screen and resume using my terminal window without it being occupied by the standard output of the script.
+
 ## 2. Parallelize
 
 Refer to the `script/gaussian/batch` subdirectory. In this folder, we have retained `one_np.py` as identical to the one in `../dev`, but this time, there are a few new files:
@@ -35,7 +37,23 @@ Finally, we assemble a few topics simultaneously in `script/higgs`, namely impor
 
 > _Remark:_ A substantial effort was put into writing `src/lfibm/simulator/higgs.py` so that it was meaningful, efficient, and concise. Conceptually, the role in the analysis pipeline that is served by the `HiggsSimulator` object defined therein may be understood as substituting  many chunks of code that would have been needed in the preamble of a Jupyter notebook meant for conducting the same analysis performed in a script. By my estimation, a substantial effort should be anticipated for developing any such source code. Good data generation is crucial for LFI and statistical computing in general. This part of the process should be respected!
 
-to collect the content.
+### Modifying `FAIR_Universe_dataset` to be installable
+
+To make this submodule immediately installable (and thus easy to invoke in my source and script code), my main contribution was to add a bare-bones `setup.py` file:
+
+```
+# setup.py
+from setuptools import setup, find_packages
+
+setup(
+    name="hep_challenge",
+    version="0.1",
+    packages=find_packages(where="."),
+    package_dir={"": "."},
+)
+```
+
+This file is enough to use `pip` for installation now. Note that the name here determines what the library will be called when I try importing objects from its namespace, e.g. `from hep_challenge.datasets import Data`.
 
 # Research task
 
@@ -53,6 +71,8 @@ git submodule init
 git submodule update
 ```
 
+to collect the content.
+
 ## Virtual environment with development-mode installs
 
 When you are simultaneously developing two bodies of code, it helps to compartmentalize them. For this demo, I've opted to put certain methods into the present project's `src` directory and others in `script` based on which files I want to run to actually perform analyses -- those go in `script` -- and which only serve to support analysis -- in `src`. Then, `src` is set up to be `pip`-installable using
@@ -69,3 +89,26 @@ pip install -e . # to install present project in editable mode in virtual env
 cd submodule/FAIR_Universe_dataset
 pip install -e . # to install submodule in editable mode in virtual env
 ```
+
+> _Remark:_ Why `pip`-install when we've already updated the submodules with `git`? Updating the `git` submodules populates the relevant directories in your machine's file system, but your computing environment (e.g. the `conda` environment for your script's context, or the Jupyter kernel for your notebook) requires the `pip`-install for names of the objects defined in that module to be identified and referred to those directories. In other words, this step allows you to import from the `src` directory at the top of a script, e.g.
+>
+> ```
+> from hep_challenge.datasets import Data
+> from lfibm.simulator.higgs import HiggsSimulator
+> ```
+
+## Configuring asset directories
+
+One more touch is needed for the Higgs example: data loading. The `hep_challenge` repo contains methods for downloading a very sizable reference data set with millions of rows, too big to be appropriate to store in a GitHub repo itself. Instead, we store this file somewhere on our local machine (perhaps by having downloaded it using `hep_challenge.datasets.Data`) and then referring to that location privately with the `configparser` library. I've written a file called `config.ini` for myself to do just that, assigning paths to directories that I'd like to consistently use in my script between jobs but whose content is too large to save on GitHub.
+
+_Remark:_ I've concealed this `.ini` file from being recognized as part of my directory, too, as I don't want to publish my local machine's file directory structure -- this information is possibly security-sensitive!
+
+My `config.ini` file is written as follows:
+
+```
+[DEFAULT]
+DataDir = <INSERT PATH>/public_data
+OutputDir = <INSERT PATH>/results
+```
+
+Note that `configparser` will allow you to parse additional categories besides "DEFAULT" if you name further sections in this file.

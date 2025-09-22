@@ -15,11 +15,16 @@ keywords = [
     "benchmark"
 ]
 dependencies = [
+    "click",
     "numpy",
     "torch",
+    "scikit-learn",
     "pandas",
     "joblib",
-    "tqdm"
+    "tqdm",
+    "matplotlib",
+    "pyarrow",
+    "requests"
 ]
 
 [tool.setuptools.packages.find]
