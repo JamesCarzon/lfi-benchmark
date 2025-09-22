@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lfibm"
+version = "0.0.1"
+description = "Benchmarking methods for likelihood-free inference"
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = [
+    "likelihood-free",
+    "simulator based inference",
+    "parameter estimation",
+    "benchmark"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

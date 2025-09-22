@@ -1,0 +1,1 @@
+from .higgs import HiggsSimulator
