@@ -18,6 +18,7 @@ The main branch of this demo repo represents some good practices for scalable an
 Refer to the `script/gaussian/dev` subdirectory. This folder is all-inclusive -- if you activate the appropriate `conda` environment, say, then the `one_np.py` script can be run from the command line without drawing on code written in other subdirectories within this code repo. Furthermore, it features a typical but bared-down use of the `click` library's command line interface (CLI). This means that you can change the way that the script is run as you submit the script from the command line.
 
 Example:
+TODO
 
 > _Remark:_ At this stage, I like to open a "screen" in my terminal with `screen -R run_script`, say. With the screen open, I can run my script as needed, and then I can close the screen and resume using my terminal window without it being occupied by the standard output of the script.
 
@@ -28,6 +29,10 @@ Refer to the `script/gaussian/batch` subdirectory. In this folder, we have retai
 - A text file, `array_params.txt`, each line of which parameterizes a desired iterate of `one_np.py`.
 
 Example:
+TODO
+Navigate to the directory hosting the shell file (this will be the working directory)
+
+> _Remark:_ It is very important in general to conceal `slurm` output files like those in the `err/` and `out/` directories from the `git` repo by adding relevant lines to the `.gitignore` file. I've only refrained from doing so here for illustrative purposes.
 
 ## 3. Modularize
 

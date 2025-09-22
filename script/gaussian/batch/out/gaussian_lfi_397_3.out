@@ -1,0 +1,27 @@
+Job 3: Running with N=20000, sigma=1.5, val_split=0.25
+
+Generated 20000 samples
+Parameter shape: (20000, 2)
+Sample shape: (20000, 2)
+Labels: 10000.0 true samples, 10000.0 permuted samples
+Parameter ranges: mu ∈ [-2.00, 2.00], nu ∈ [-1.00, 1.00]
+
+Training set: 15000 samples
+Validation set: 5000 samples
+
+Training likelihood ratio estimator...
+Training completed. Final accuracy: 0.6541
+Converged in 18 iterations
+
+Example likelihood ratio estimates for first 10 validation samples:
+Sample 0: True label=0.0, Estimated LR=1.0881, True likelihood=0.0358
+Sample 1: True label=0.0, Estimated LR=0.4699, True likelihood=0.0064
+Sample 2: True label=1.0, Estimated LR=1.2525, True likelihood=0.0149
+Sample 3: True label=1.0, Estimated LR=0.3248, True likelihood=0.0135
+Sample 4: True label=1.0, Estimated LR=1.1666, True likelihood=0.0140
+Sample 5: True label=0.0, Estimated LR=1.1148, True likelihood=0.0143
+Sample 6: True label=0.0, Estimated LR=0.4942, True likelihood=0.0141
+Sample 7: True label=1.0, Estimated LR=2.1195, True likelihood=0.0558
+Sample 8: True label=0.0, Estimated LR=1.2933, True likelihood=0.0382
+Sample 9: True label=1.0, Estimated LR=1.8420, True likelihood=0.0652
+Job 3 completed
