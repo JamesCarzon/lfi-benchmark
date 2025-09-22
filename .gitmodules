@@ -1,0 +1,3 @@
+[submodule "submodule/FAIR_Universe_dataset"]
+	path = submodule/FAIR_Universe_dataset
+	url = git@github.com:JamesCarzon/FAIR_Universe_dataset.git
