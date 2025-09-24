@@ -209,3 +209,5 @@ __marimo__/
 # Add'l
 assets/
 results/
+out/
+err/

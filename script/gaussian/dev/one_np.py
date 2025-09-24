@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score
 import warnings
+import os
 
 # For parameterization!
 import click
@@ -220,7 +221,9 @@ def main(n, config_dir, val_split, sigma):
     config = configparser.ConfigParser()
     config_path = Path(config_dir).expanduser()
     config.read(config_path)
-    OUTPUT_DIR = config["DEFAULT"]["OutputDir"]
+    OUTPUT_DIR = f'{config["DEFAULT"]["OutputDir"]}/gaussian/n{n}_val_split{val_split}_sigma{sigma}'
+    # Ensure output directory exists
+    Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
     
     # Initialize Gaussian simulator
     simulator = GaussianSimulator(sigma=sigma)
@@ -263,6 +266,60 @@ def main(n, config_dir, val_split, sigma):
     print("\nTraining likelihood ratio estimator...")
     estimator.fit(train_params, train_samples, train_Y)
 
+    # Plot confidence intervals for 10 random samples
+    true_indices = np.where(val_Y == 1)[0]
+    selected_indices = np.random.choice(true_indices, min(10, len(true_indices)), replace=False)
+
+    plt.figure(figsize=(12, 8))
+
+    for i, idx in enumerate(selected_indices):
+        sample = val_samples[idx]
+        true_mu = val_params[idx, 0]  # True μ value
+        true_nu = val_params[idx, 1]  # True ν value
+        
+        # Grid search over μ values (fix ν to true value)
+        mu_grid = np.linspace(-3, 3, 50)
+        log_likelihood_ratios = []
+        
+        for mu_test in mu_grid:
+            test_params = np.array([[mu_test, true_nu]])
+            test_samples = sample.reshape(1, -1)
+            lr = estimator.estimate_likelihood_ratio(test_params, test_samples)[0]
+            log_lr = -2 * np.log(np.clip(lr, 1e-10, np.inf))
+            log_likelihood_ratios.append(log_lr)
+        
+        log_likelihood_ratios = np.array(log_likelihood_ratios)
+        
+        # Find 95% confidence interval (where -2*log(LR) < 3.84)
+        in_ci = log_likelihood_ratios < 3.84
+        
+        if np.any(in_ci):
+            ci_indices = np.where(in_ci)[0]
+            ci_lower = mu_grid[ci_indices[0]]
+            ci_upper = mu_grid[ci_indices[-1]]
+            
+            # Plot confidence interval as horizontal line
+            y_pos = i + 0.5
+            plt.plot([ci_lower, ci_upper], [y_pos, y_pos], 'b-', linewidth=3, alpha=0.7)
+            plt.plot([ci_lower, ci_upper], [y_pos, y_pos], 'bo', markersize=4)
+            plt.plot(true_mu, y_pos, 'ro', markersize=6)  # True value
+            
+            # Add text with CI bounds
+            plt.text(3.2, y_pos, f'[{ci_lower:.2f}, {ci_upper:.2f}]', 
+                    va='center', fontsize=8)
+
+    plt.xlabel('μ (parameter of interest)')
+    plt.ylabel('Sample Index')
+    plt.title('95% Confidence Intervals for μ\n(Blue lines = CI, Red dots = True values)')
+    plt.xlim(-3.5, 4.5)
+    plt.ylim(0, 10.5)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f"{OUTPUT_DIR}/confidence_intervals.png", dpi=150)
+    plt.close()
+
+    print(f"\nConfidence intervals plotted for {len(selected_indices)} samples")
+
     # Example: Estimate likelihood ratios for first 10 validation samples
     print("\nExample likelihood ratio estimates for first 10 validation samples:")
     test_params = val_params[:10]
@@ -279,57 +336,43 @@ def main(n, config_dir, val_split, sigma):
               f"Estimated LR={likelihood_ratios[i]:.4f}, "
               f"True likelihood={true_likelihoods[i]:.4f}")
 
-    # Plot likelihood ratio distribution using validation set only
-    val_ratios = estimator.estimate_likelihood_ratio(val_params, val_samples)
-    finite_mask = np.isfinite(val_ratios)
-    val_ratios_clean = val_ratios[finite_mask]
-    val_Y_clean = val_Y[finite_mask]
+    # Get raw likelihood ratios first
+    raw_likelihood_ratios = estimator.estimate_likelihood_ratio(val_params, val_samples)
+    
+    # Apply safety checks before taking log
+    # Remove any non-positive or non-finite values
+    safe_mask = (raw_likelihood_ratios > 1e-10) & np.isfinite(raw_likelihood_ratios)
+    safe_ratios = raw_likelihood_ratios[safe_mask]
+    safe_Y = val_Y[safe_mask]
+    
+    # Calculate -2 * log(LR)
+    minus_2_log_ratios = -2 * np.log(safe_ratios)
+    
+    # Additional safety check for the result
+    finite_mask = np.isfinite(minus_2_log_ratios) & (minus_2_log_ratios >= 0)
+    val_ratios_clean = minus_2_log_ratios[finite_mask]
+    val_Y_clean = safe_Y[finite_mask]
 
+    # Only use TRUE samples for chi-square comparison (this is key!)
+    true_sample_ratios = val_ratios_clean[val_Y_clean == 1]
+    
     # Clip extreme values for better visualization
-    val_ratios_clipped = np.clip(val_ratios_clean, 0, np.percentile(val_ratios_clean, 99))
-    x_range = np.linspace(0, 10, 1000)
-
-    # Ensure output directory exists
-    Path(f"{OUTPUT_DIR}/gaussian").mkdir(parents=True, exist_ok=True)
+    val_ratios_clipped = np.clip(true_sample_ratios, 0, np.percentile(true_sample_ratios, 99))
+    
+    # Extend x-range to better show the chi-square distribution
+    x_range = np.linspace(0, 20, 1000)
 
     plt.figure(figsize=(10, 6))
-    plt.hist(val_ratios_clipped[val_Y_clean == 1], bins=50, alpha=0.7, 
-             label=f'True samples (n={np.sum(val_Y_clean == 1)})', density=True)
+    plt.hist(val_ratios_clipped, bins=50, alpha=0.7, 
+             label=f'True samples -2×log(LR) (n={len(val_ratios_clipped)})', density=True)
     plt.plot(x_range, chi2.pdf(x_range, df=param_dim), 'r--', 
              label=f'Chi-square (df={param_dim})', linewidth=2)
-    plt.xlabel('Likelihood Ratio')
+    plt.xlabel('-2 × Log(Likelihood Ratio)')
     plt.ylabel('Density')
-    plt.xlim(0, 10)
+    plt.xlim(0, 20)  # Extended range
     plt.legend()
-    plt.title(f'Distribution of Likelihood Ratios - Gaussian Simulation (σ={sigma})')
-    plt.savefig(f"{OUTPUT_DIR}/gaussian/distribution_of_likelihood_ratio.png", dpi=150)
-    plt.close()
-
-    # Additional plot: Parameter space visualization for validation set
-    plt.figure(figsize=(12, 5))
-    
-    plt.subplot(1, 2, 1)
-    plt.scatter(val_params[val_Y == 1, 0], val_params[val_Y == 1, 1], 
-                alpha=0.6, s=20, label='True samples')
-    plt.scatter(val_params[val_Y == 0, 0], val_params[val_Y == 0, 1], 
-                alpha=0.6, s=20, label='Permuted samples')
-    plt.xlabel('μ (parameter of interest)')
-    plt.ylabel('ν (nuisance parameter)')
-    plt.legend()
-    plt.title('Parameter Space Distribution')
-    
-    plt.subplot(1, 2, 2)
-    plt.scatter(val_samples[val_Y == 1, 0], val_samples[val_Y == 1, 1], 
-                alpha=0.6, s=20, label='True samples')
-    plt.scatter(val_samples[val_Y == 0, 0], val_samples[val_Y == 0, 1], 
-                alpha=0.6, s=20, label='Permuted samples')
-    plt.xlabel('Sample dimension 1')
-    plt.ylabel('Sample dimension 2')
-    plt.legend()
-    plt.title('Sample Space Distribution')
-    
-    plt.tight_layout()
-    plt.savefig(f"{OUTPUT_DIR}/gaussian/parameter_sample_space.png", dpi=150)
+    plt.title(f'Distribution of -2×Log(LR) - Gaussian Simulation (σ={sigma})')
+    plt.savefig(f"{OUTPUT_DIR}/distribution_of_likelihood_ratio.png", dpi=150)
     plt.close()
 
     return
