@@ -18,9 +18,13 @@ The main branch of this demo repo represents some good practices for scalable an
 Refer to the `script/gaussian/dev` subdirectory. This folder is all-inclusive -- if you activate the appropriate `conda` environment, say, then the `one_np.py` script can be run from the command line without drawing on code written in other subdirectories within this code repo. Furthermore, it features a typical but bared-down use of the `click` library's command line interface (CLI). This means that you can change the way that the script is run as you submit the script from the command line.
 
 Example:
-TODO
+```
+cd lfi-benchmark/script/gaussian/dev
+conda activate -n <CONDA_ENV>
+python one_np.py
+```
 
-> _Remark:_ At this stage, I like to open a "screen" in my terminal with `screen -R run_script`, say. With the screen open, I can run my script as needed, and then I can close the screen and resume using my terminal window without it being occupied by the standard output of the script.
+> _Remark:_ At this stage, I like to open a GNU screen in my terminal with `screen -R run_script`, say. With the screen open, I can run my script as needed, and then I can close the screen and resume using my terminal window without it being occupied by the standard output of the script.
 
 ## 2. Parallelize
 
@@ -29,8 +33,10 @@ Refer to the `script/gaussian/batch` subdirectory. In this folder, we have retai
 - A text file, `array_params.txt`, each line of which parameterizes a desired iterate of `one_np.py`.
 
 Example:
-TODO
-Navigate to the directory hosting the shell file (this will be the working directory)
+```
+cd lfi-benchmark/script/gaussian/batch
+sbatch one_np.sh
+```
 
 > _Remark:_ It is very important in general to conceal `slurm` output files like those in the `err/` and `out/` directories from the `git` repo by adding relevant lines to the `.gitignore` file. I've only refrained from doing so here for illustrative purposes.
 
@@ -41,6 +47,12 @@ Finally, we assemble a few topics simultaneously in `script/higgs`, namely impor
 - The `FAIR_Universe_dataset` submodule
 
 > _Remark:_ A substantial effort was put into writing `src/lfibm/simulator/higgs.py` so that it was meaningful, efficient, and concise. Conceptually, the role in the analysis pipeline that is served by the `HiggsSimulator` object defined therein may be understood as substituting  many chunks of code that would have been needed in the preamble of a Jupyter notebook meant for conducting the same analysis performed in a script. By my estimation, a substantial effort should be anticipated for developing any such source code. Good data generation is crucial for LFI and statistical computing in general. This part of the process should be respected!
+
+Example:
+```
+cd lfi-benchmark/script/higgs
+sbatch two_params.sh
+```
 
 ### Modifying `FAIR_Universe_dataset` to be installable
 
@@ -62,7 +74,28 @@ This file is enough to use `pip` for installation now. Note that the name here d
 
 # Research task
 
-TODO: Fill in
+In brief, we study methods similar to those used in practice for the discovery of the Higgs boson and other such experiments. Although the likelihood is intractable in experiments encoded only by a simulator, we use what is often known as the ``likelihood ratio trick'' to estimate the likelihood. Let $p(x\vert\theta)$ denote the true likelihood for observed data $x$ and given parameter $\theta$. In our Gaussian toy model, this likelihood is a known bivariate Gaussian. In our Higgs example, the likelihood is represented by a large (theoretically assumed-to-be-representative) data set that is provided by the FAIR Universe's API.
+
+The likelihood ratio trick cleverly bypasses the limitations of a finite simulated data set by leveraging the identity,
+$$
+\frac{p(x\vert\theta)}{p(x)} \approx \frac{p(y=1\vert x,\theta)}{1-p(y=1\vert x,\theta)},
+$$
+where $y$ is derived in data generation to indicate whether pairs $(x,\theta)$ are matched in the sense that $x\sim p(x\vert\theta)$ or mismatched. For a uniform proposal $\pi$ on $\theta$, we
+- Generate some training pairs $(x, \theta, y)\sim p(x\vert\theta)\pi(\theta)\delta(1)$ and $(x, \theta, y)\sim p(x\vert\theta)\pi(\theta')\delta(0)$, $\theta'\ne \theta$;
+- Train a probabilistic classifier $h$ for $y\vert x,\theta$ using a multilayer perceptron; and
+- Output $\hat{p}(x\vert\theta) \propto h(x, \theta) / (1-h(x, \theta))$.
+
+## Inference
+
+Define likelihood ratio test statistic
+$$
+t(x, \theta) = -2\log \left(\frac{\hat{p}(x\vert\theta)}{\hat{p}(x\vert\hat{\theta}_{\text{MLE}})}\right).
+$$
+With the likelihood ratio estimator, we construct confidence intervals by invoking Wilks' theorem on the sampling distribution of the statistic,
+$$
+C_{95\%}(x) = \{\theta\in\Theta : t(x, \theta) < \chi^2_{0.95}(df=\text{dim}(\Theta)) }. 
+$$
+As a diagnostic check, we also plot the sampling distribution of $t$ to see if it is indeed approximately $\chi^2(df=\text{dim}(\Theta))$-distributed.
 
 # Getting started
 
