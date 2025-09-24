@@ -77,9 +77,9 @@ This file is enough to use `pip` for installation now. Note that the name here d
 In brief, we study methods similar to those used in practice for the discovery of the Higgs boson and other such experiments. Although the likelihood is intractable in experiments encoded only by a simulator, we use what is often known as the ``likelihood ratio trick'' to estimate the likelihood. Let $p(x\vert\theta)$ denote the true likelihood for observed data $x$ and given parameter $\theta$. In our Gaussian toy model, this likelihood is a known bivariate Gaussian. In our Higgs example, the likelihood is represented by a large (theoretically assumed-to-be-representative) data set that is provided by the FAIR Universe's API.
 
 The likelihood ratio trick cleverly bypasses the limitations of a finite simulated data set by leveraging the identity,
-$$
-\frac{p(x\vert\theta)}{p(x)} \approx \frac{p(y=1\vert x,\theta)}{1-p(y=1\vert x,\theta)},
-$$
+
+$$\frac{p(x\vert\theta)}{p(x)} \approx \frac{p(y=1\vert x,\theta)}{1-p(y=1\vert x,\theta)},$$
+
 where $y$ is derived in data generation to indicate whether pairs $(x,\theta)$ are matched in the sense that $x\sim p(x\vert\theta)$ or mismatched. For a uniform proposal $\pi$ on $\theta$, we
 - Generate some training pairs $(x, \theta, y)\sim p(x\vert\theta)\pi(\theta)\delta(1)$ and $(x, \theta, y)\sim p(x\vert\theta)\pi(\theta')\delta(0)$, $\theta'\ne \theta$;
 - Train a probabilistic classifier $h$ for $y\vert x,\theta$ using a multilayer perceptron; and
@@ -88,13 +88,13 @@ where $y$ is derived in data generation to indicate whether pairs $(x,\theta)$ a
 ## Inference
 
 Define likelihood ratio test statistic
-$$
-t(x, \theta) = -2\log \left(\frac{\hat{p}(x\vert\theta)}{\hat{p}(x\vert\hat{\theta}_{\text{MLE}})}\right).
-$$
-With the likelihood ratio estimator, we construct confidence intervals by invoking Wilks' theorem on the sampling distribution of the statistic,
-$$
-C_{95\%}(x) = \{\theta\in\Theta : t(x, \theta) < \chi^2_{0.95}(df=\text{dim}(\Theta)) }. 
-$$
+
+$$t(x, \theta) = -2\log \left( \frac{\hat{p}(x\vert\theta)}{\hat{p}(x\vert\hat{\theta}_{\text{MLE}})} \right).$$
+
+With the likelihood ratio estimator, we construct 95% confidence intervals by invoking Wilks' theorem on the sampling distribution of the statistic,
+
+$$C_{0.95}(x) =  \\{ \theta\in\Theta : t(x, \theta) < \chi^2_{0.95}(df=\text{dim}(\Theta)) \\}.$$
+
 As a diagnostic check, we also plot the sampling distribution of $t$ to see if it is indeed approximately $\chi^2(df=\text{dim}(\Theta))$-distributed.
 
 # Getting started
